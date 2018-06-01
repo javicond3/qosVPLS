@@ -8,29 +8,13 @@ import org.apache.felix.scr.annotations.Reference;
 import org.apache.felix.scr.annotations.ReferenceCardinality;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.onosproject.net.flow.FlowRule;
-import org.onosproject.net.flow.FlowRuleEvent;
-import org.onosproject.net.flow.FlowRuleListener;
-import org.onosproject.net.flow.FlowRuleService;
-import org.onosproject.net.flow.DefaultFlowRule;
-
-import static org.onosproject.net.flow.FlowRuleEvent.Type.*;
-
-import org.onosproject.core.ApplicationId;
-import org.onosproject.core.CoreService;
-
-import com.google.common.collect.HashMultimap;
-
-
-
-
-
 import org.onlab.packet.Ethernet;
 import org.onlab.packet.IPv4;
 import org.onlab.packet.MacAddress;
 import org.onosproject.core.ApplicationId;
 import org.onosproject.core.CoreService;
 import org.onosproject.net.DeviceId;
+import org.onosproject.net.flow.DefaultFlowRule;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
 import org.onosproject.net.flow.FlowRule;
@@ -51,9 +35,13 @@ import org.onosproject.net.packet.PacketPriority;
 import org.onosproject.net.packet.PacketProcessor;
 import org.onosproject.net.packet.PacketService;
 import org.onosproject.net.meter.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import org.onosproject.core.ApplicationId;
+import org.onosproject.core.CoreService;
+import static org.onosproject.net.flow.FlowRuleEvent.Type.*;
+import static org.onosproject.net.flow.FlowRuleEvent.Type.RULE_REMOVED;
+import static org.onosproject.net.flow.criteria.Criterion.Type.ETH_SRC;
+import static org.onosproject.net.flow.criteria.Criterion.Type.VLAN_VID;
+import com.google.common.collect.HashMultimap;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Timer;
@@ -61,12 +49,10 @@ import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
 import java.util.*;
 
-import static org.onosproject.net.flow.FlowRuleEvent.Type.RULE_REMOVED;
-import static org.onosproject.net.flow.criteria.Criterion.Type.ETH_SRC;
-import static org.onosproject.net.flow.criteria.Criterion.Type.VLAN_VID;
+
 
 /**
- * Skeletal ONOS application component.
+ * Aplicacion para implementar un mecanismo de QoS en aplicacion VPLS ONOS
  */
 @Component(immediate = true)
 public class QosVplsComponent {
@@ -86,8 +72,6 @@ public class QosVplsComponent {
     @Activate
     protected void activate() {
         log.info("Started");
-        // bug del test por eso tengo que poner el if pq al pasar el test me lo
-        // detecta null
         if (flowRuleService != null && coreService != null) {
             flowRuleService.addListener(flowListener);
             appId = coreService.registerApplication("org.foo.app");
@@ -105,10 +89,14 @@ public class QosVplsComponent {
             flowRuleService.removeListener(flowListener);
         }
     }
-
+    /**
+     * Un listener para rule events.
+     * Updates rules if there is a change in VPLS net.
+     */
     private class InternalFlowListener implements FlowRuleListener {
         @Override
         public void event(FlowRuleEvent event) {
+        	//capturo el evento y filtro solo aquellos que interesan
             FlowRule flowRule = event.subject();
             Criterion criterioPort = flowRule.selector().getCriterion(
                     Criterion.Type.IN_PORT);
@@ -129,6 +117,7 @@ public class QosVplsComponent {
                 if (criterioVlan != null) {
                     vlan = criterioVlan.toString().split(":")[1]; // pq devuelve  VLAN_VID:1                                                                    
                 }
+                //compruebo si la nueva regla afecta a alguna antigua
                 QosApliedMeters qosApliedMeters = QosApliedMeters.getInstance();
                 QosOldFlows qosOldFlows = QosOldFlows.getInstance();
                 if (qosApliedMeters.getMapaMeters().containsKey(device)) {
@@ -136,6 +125,10 @@ public class QosVplsComponent {
                             vlan);
                     if (qosApliedMeters.getMapaMeters().get(device).contains(
                             newMeter)) {
+                    	/*si el tipo de regla es rule_added debo borrar la antigua, 
+                    	 *crear la nueva y
+                    	 *actualizar qosOldFlows
+                    	*/
                         if (event.type() == RULE_ADDED) {
                             QosMeter meterGuardado = qosApliedMeters.getMapaMeters()
                                     .get(device).get(
@@ -172,6 +165,9 @@ public class QosVplsComponent {
 
                             flowRuleService.applyFlowRules(newFlow);
                         }
+                      /*si el tipo de regla es rule_removed debo borrar la antigua la antigua
+                       *entrada y actualizar qosOldFlows 
+                      */ 
                         if (event.type() == RULE_REMOVED) {
                             QosMeter meterGuardado = qosApliedMeters.getMapaMeters()
                                     .get(device).get(

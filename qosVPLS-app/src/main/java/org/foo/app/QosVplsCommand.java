@@ -4,8 +4,23 @@ import org.apache.felix.scr.annotations.Activate;
 import org.apache.felix.scr.annotations.Component;
 import org.apache.felix.scr.annotations.Deactivate;
 import org.apache.felix.scr.annotations.Service;
+import org.apache.felix.scr.annotations.Reference;
+import org.apache.felix.scr.annotations.ReferenceCardinality;
+import org.apache.karaf.shell.commands.Command;
+import org.apache.karaf.shell.commands.Argument;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
+import org.onlab.packet.Ethernet;
+import org.onlab.packet.IPv4;
+import org.onlab.packet.MacAddress;
+import org.onosproject.cli.AbstractShellCommand;
+import org.onosproject.core.ApplicationId;
+import org.onosproject.core.CoreService;
+import org.onosproject.net.packet.PacketContext;
+import org.onosproject.net.packet.PacketPriority;
+import org.onosproject.net.packet.PacketProcessor;
+import org.onosproject.net.packet.PacketService;
+import org.onosproject.net.meter.*;
 import org.onosproject.net.ElementId;
 import org.onosproject.net.DeviceId;
 import org.onosproject.net.flow.FlowRule;
@@ -13,30 +28,8 @@ import org.onosproject.net.flow.FlowRuleEvent;
 import org.onosproject.net.flow.FlowRuleListener;
 import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.flow.DefaultFlowRule;
-import org.onosproject.core.ApplicationId;
-import org.onosproject.core.CoreService;
-
-import static org.onosproject.net.flow.FlowRuleEvent.Type.*;
-
-import com.google.common.collect.HashMultimap;
-
-import org.apache.felix.scr.annotations.Activate;
-import org.apache.felix.scr.annotations.Component;
-import org.apache.felix.scr.annotations.Deactivate;
-import org.apache.felix.scr.annotations.Reference;
-import org.apache.felix.scr.annotations.ReferenceCardinality;
-import org.onlab.packet.Ethernet;
-import org.onlab.packet.IPv4;
-import org.onlab.packet.MacAddress;
-import org.onosproject.core.ApplicationId;
-import org.onosproject.core.CoreService;
-import org.onosproject.net.DeviceId;
 import org.onosproject.net.flow.DefaultTrafficSelector;
 import org.onosproject.net.flow.DefaultTrafficTreatment;
-import org.onosproject.net.flow.FlowRule;
-import org.onosproject.net.flow.FlowRuleEvent;
-import org.onosproject.net.flow.FlowRuleListener;
-import org.onosproject.net.flow.FlowRuleService;
 import org.onosproject.net.flow.TrafficSelector;
 import org.onosproject.net.flow.TrafficTreatment;
 import org.onosproject.net.flow.criteria.Criterion;
@@ -46,36 +39,23 @@ import org.onosproject.net.flow.criteria.EthCriterion;
 import org.onosproject.net.flowobjective.DefaultForwardingObjective;
 import org.onosproject.net.flowobjective.FlowObjectiveService;
 import org.onosproject.net.flowobjective.ForwardingObjective;
-import org.onosproject.net.packet.PacketContext;
-import org.onosproject.net.packet.PacketPriority;
-import org.onosproject.net.packet.PacketProcessor;
-import org.onosproject.net.packet.PacketService;
-import org.onosproject.net.meter.*;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
-
+import static org.onosproject.net.flow.FlowRuleEvent.Type.RULE_REMOVED;
+import static org.onosproject.net.flow.criteria.Criterion.Type.ETH_SRC;
+import static org.onosproject.net.flow.criteria.Criterion.Type.VLAN_VID;
+import static org.onosproject.net.flow.FlowRuleEvent.Type.*;
 import java.util.Objects;
 import java.util.Optional;
 import java.util.Timer;
 import java.util.TimerTask;
 import java.util.concurrent.TimeUnit;
 import java.util.*;
-
-import static org.onosproject.net.flow.FlowRuleEvent.Type.RULE_REMOVED;
-import static org.onosproject.net.flow.criteria.Criterion.Type.ETH_SRC;
-import static org.onosproject.net.flow.criteria.Criterion.Type.VLAN_VID;
-import static org.onosproject.net.flow.FlowRuleEvent.Type.*;
-
-import org.apache.karaf.shell.commands.Command;
-import org.apache.karaf.shell.commands.Argument;
-import org.foo.app.QosApliedMeters;
-import org.onosproject.cli.AbstractShellCommand;
-
 import java.io.*;
-import java.util.*;
+import com.google.common.collect.HashMultimap;
+import org.foo.app.QosApliedMeters;
+
 
 /**
- * Sample Apache Karaf CLI command
+ * CLI para interactuar con qosVPLS.
  */
 @Command(scope = "onos", name = "qosVpls", description = "Commands to add qos to Vpls")
 public class QosVplsCommand extends AbstractShellCommand {
@@ -126,7 +106,15 @@ public class QosVplsCommand extends AbstractShellCommand {
 			print("Command not found");
 		}
 	}
-
+	
+	/**
+     * Anade mecanismo de qos .
+     *
+     * @param switchName el nombre del switch donde aplicar mecanismo QoS
+     * @param idMeter el identificador del meter que quiere aplicar mecanismo QoS
+     * @param portMeter el puerto donde se quiere aplicar mecanismo QoS
+     * @param vlanMeter etiqueta vlan que sobre la que aplicar mecanismo QoS
+     */
 	private void add_qos(String switchName, String idMeter, String portMeter,
 			String vlanMeter) {
 		QosApliedMeters qosApliedMeters = QosApliedMeters.getInstance();
@@ -160,8 +148,9 @@ public class QosVplsCommand extends AbstractShellCommand {
 							.getAppId("org.onosproject.net.intent");
 					QosMeter meterToAdd = new QosMeter(idMeter, portMeter,
 							vlanMeter);
-					// compureba primero si existe ese meter, sino existe lo
-					// mete y añade flows, sino da problemas
+					/* compureba primero si existe ese meter, sino existe lo
+					 *mete y añade flows
+					*/
 					if (qosApliedMeters.addElement(switchName, idMeter,
 							portMeter, vlanMeter) == true) {
 						for (FlowEntry flowEntry : flowRuleService
@@ -205,6 +194,14 @@ public class QosVplsCommand extends AbstractShellCommand {
 		}
 	}
 
+	/**
+     * Elimina mecanismo de qos .
+     *
+     * @param switchName el nombre del switch donde eliminar mecanismo QoS
+     * @param idMeter el identificador del meter que quiere eliminar mecanismo QoS
+     * @param portMeter el puerto donde se quiere eliminar mecanismo QoS
+     * @param vlanMeter etiqueta vlan que sobre la que eliminar mecanismo QoS
+     */
 	private void delete_qos(String switchName, String idMeter,
 			String portMeter, String vlanMeter) {
 		QosApliedMeters qosApliedMeters = QosApliedMeters.getInstance();
@@ -231,9 +228,10 @@ public class QosVplsCommand extends AbstractShellCommand {
 							vlanMeter);
 					ArrayList<FlowRule> flowRulesToDelete = qosOldFlows.getMapaOldFlows().get("" + switchName + ""
 									+ meterToDelete.toString());
-					// Borro la entrada del meter borrar ningun flow pq si se
-					// borra uno y llega la señal de REMOVED a un meter
-					// guardado lo va a volver a crear al verlo en el mapa
+					/* Borro la entrada del meter borrar ningun flow pq si se
+					 *borra uno y llega la señal de REMOVED a un meter
+					 *guardado lo va a volver a crear al verlo en el mapa
+					*/
 					qosApliedMeters.delElement(switchName, idMeter, portMeter,
 							vlanMeter);
 					if (flowRulesToDelete != null) {
@@ -250,6 +248,9 @@ public class QosVplsCommand extends AbstractShellCommand {
 		}
 	}
 
+	/**
+     * Elimina todos los mecanismos de QoS.
+     */
 	private void clear() {
 		QosApliedMeters qosApliedMeters = QosApliedMeters.getInstance();
 		QosOldFlows qosOldFlows = QosOldFlows.getInstance();

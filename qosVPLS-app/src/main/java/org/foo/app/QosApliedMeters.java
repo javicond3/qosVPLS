@@ -6,6 +6,9 @@ import java.io.*;
 import java.util.*;
 import java.util.Map.Entry;
 
+/**
+ *Clase que almacena los mecanismos de QoS aplicados
+**/
 public class QosApliedMeters {
 	private Map<String, ArrayList<QosMeter>> mapaMeters;
 	
@@ -20,12 +23,24 @@ public class QosApliedMeters {
 			instance = new QosApliedMeters();
 		return instance;
 	}
-	
+	/**
+     * Getter de mapameters.
+	 *
+     * @return mapa con los mecanismos de QoS aplicados
+     */
 	public Map<String, ArrayList<QosMeter>> getMapaMeters(){
 		return this.mapaMeters;
 	}
 
-	// devuleve true si lo añade, false si ya existia
+	/**
+     * Actualiza mapaMeters con un nuevo Meter.
+     * 
+     * @param conmutador el switch en el que se aplica el meter
+     * @param meterId el identificador del meter
+     * @param meterPort el puerto donde aplicar el meter
+     * @param meterVlan la vlan sobre la que aplica el meter
+     * @return true si lo añade, false si ya existía
+     */
 	public Boolean addElement(String conmutador, String meterId,
 			String meterPort, String meterVlan) {
 		if (!this.mapaMeters.containsKey(conmutador)) {
@@ -44,6 +59,14 @@ public class QosApliedMeters {
 
 	}
 
+	/**
+     * Elimina un meter de mapaMeters.
+     * 
+     * @param conmutador el switch en el que se aplica el meter
+     * @param meterId el identificador del meter
+     * @param meterPort el puerto donde aplica el meter
+     * @param meterVlan la vlan sobre la que aplica el meter
+     */
 	public void delElement(String conmutador, String meterId,
 			String meterPort, String meterVlan) {
 		if (!this.mapaMeters.containsKey(conmutador)) {
@@ -63,7 +86,9 @@ public class QosApliedMeters {
 		}
 
 	}
-
+	/**
+     * Muestra todos los mecanismos de QoS aplicados.
+     */
 	public void show() {
 		if (this.mapaMeters.isEmpty()) {
 			System.out.println("No qos");
@@ -84,7 +109,9 @@ public class QosApliedMeters {
 			}
 		}
 	}
-	
+	/**
+     * Elimina todos los mecanismos de QoS borrando el contenido de mapaMeters.
+     */
 	public void clear(){
 		this.mapaMeters.clear();
 	}

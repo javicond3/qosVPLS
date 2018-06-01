@@ -1,5 +1,8 @@
 package org.foo.app;
 
+/**
+ *Clase que que representa un mecanismo de QoS.
+**/
 public class QosMeter {
 
 	public String id;

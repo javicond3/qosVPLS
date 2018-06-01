@@ -18,6 +18,9 @@ import java.io.*;
 import java.util.*;
 import java.util.Map.Entry;
 
+/**
+ *Clase que almacena los flujos sobre los que hay QoS aplicada.
+**/
 public class QosOldFlows {
 	
 	private Map<String, ArrayList<FlowRule>> mapaOldFlows; 
@@ -34,11 +37,25 @@ public class QosOldFlows {
 		return instance;
 	}
 	
+	/**
+     * Getter de mapameters.
+	 *
+     * @return mapa con los oldFlows.
+     */
 	public Map<String, ArrayList<FlowRule>> getMapaOldFlows(){
 		return this.mapaOldFlows;
 	}
 	
-	
+	/**
+     * Devuelve una oldFlowRule si la nueva tiene el mismo meter 
+     * y coincide en el ethernet destino
+     * o null en caso contrario.
+     * 
+     * @param flowRuleNew la nueva flowRule de la que se quiere ver si
+     * hay una antigua con el mismo eth destino y meter
+     * @param meter que identifica los oldFlowRules
+     * @return rule del oldFlowRules o null.
+     */
 	public FlowRule isOldFlow(FlowRule flowRuleNew, String meter) {
 		Criterion criterioDestNew = flowRuleNew.selector().getCriterion(
 				Criterion.Type.ETH_DST_MASKED);
@@ -67,6 +84,12 @@ public class QosOldFlows {
 		return null;
 	}
 
+	/**
+     * Añade una nueva flowRule asociada a un meter.
+     * 
+     * @param flowRuleNew la nueva flowRule a añadir
+     * @param meter que identifica los oldFlowRules
+     */
 	public void addFlow(FlowRule flowRuleNew, String meter) {
 		if (!this.mapaOldFlows.containsKey(meter)) {
 			this.mapaOldFlows.put(meter, new ArrayList<FlowRule>());
@@ -74,6 +97,9 @@ public class QosOldFlows {
 		this.mapaOldFlows.get(meter).add(flowRuleNew);
 	}
 	
+	/**
+     * Elimina todos los oldFlowRules.
+     */
 	public void clear(){
 		this.mapaOldFlows.clear();
 	}

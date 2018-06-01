@@ -6,7 +6,7 @@ import java.util.List;
 import java.util.stream.Collectors;
 
 /**
- * Enum representing the VPLS command type.
+ * Enumerado representando el comando qosVPLS.
  */
 public enum QosVplsCommandEnum {
     
@@ -29,9 +29,9 @@ public enum QosVplsCommandEnum {
     }
 
     /**
-     * Returns a list of command string values.
+     * Returns la lista de comandos.
      *
-     * @return the list of string values corresponding to the enums
+     * @return la lista de strings que se corresponden al enum
      */
     public static List<String> toStringList() {
         return Arrays.stream(values()).map(QosVplsCommandEnum::toString)
@@ -39,13 +39,11 @@ public enum QosVplsCommandEnum {
     }
 
     /**
-     * Alternative method to valueOf. It returns the command type corresponding
-     * to the given string. If the parameter does not match a constant name, or
-     * is null, null is returned.
+     * Devuelve el comando que se corresponde con el String
      *
-     * @param command
-     *            the string representing the encapsulation type
-     * @return the EncapsulationType constant corresponding to the string given
+     * @param comando el string que represanta el comando
+     *            
+     * @return the EncapsulationType constante que se corresponde con el string
      */
     public static QosVplsCommandEnum enumFromString(String command) {
         if (command != null && !command.isEmpty()) {
